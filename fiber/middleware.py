@@ -56,7 +56,7 @@ class AdminPageMiddleware(object):
 
                     fiber_data['show_login'] = True
                 else:
-                    if self.is_django_admin(request):
+                    if self.is_django_admin(request) or self.is_rosetta_admin(request):
                         fiber_data['backend'] = True
                     else:
                         t = loader.get_template('fiber/admin.html')
@@ -162,8 +162,20 @@ class AdminPageMiddleware(object):
                     return False
         return True
 
+
     def is_django_admin(self, request):
+        """
+        Checks if the current request is in the Django admin interface
+        """
         return re.search(r'^%s' % (reverse('admin:index').lstrip('/')), request.path_info.lstrip('/'))
+
+
+    def is_rosetta_admin(self, request):
+        """
+        Checks if the current request is in the Rosetta translation backend (anton@ignaz.at)
+        """
+        return re.search(r'^%s' % (reverse('rosetta.views.home').lstrip('/')), request.path_info.lstrip('/'))
+
 
     def get_header_html(self, request):
         t = loader.get_template('fiber/header.html')
