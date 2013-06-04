@@ -645,7 +645,7 @@ var BaseFileSelectDialog = AdminRESTDialog.extend({
 				'id': 'upload-buttonpane'
 			});
 
-		var upload_button = $('<button type="button">' + gettext('Upload a new file') + '</button>')
+		var upload_button = $('<a>' + gettext('Upload a new file') + '</a>')
 			.appendTo(upload_button_pane)
 			.attr({
 				'class': 'upload',
@@ -663,19 +663,23 @@ var BaseFileSelectDialog = AdminRESTDialog.extend({
 			});
 
 		// Valums file uploader
-		var uploader = new qq.FileUploaderBasic({
-			multipart: true,
-			fieldName: this.get_upload_fieldname(),
-			element: upload_button_pane[0],
+		var uploader = new qq.FineUploaderBasic({
 			button: upload_button_pane[0], // connecting directly to the jQUery UI upload_button doesn't work
-			action: this.get_upload_path(),
-			params: {
-				title: 'uploaded'
+			callbacks: {
+				onComplete: $.proxy(function(id, fileName, responseJSON) {
+					this.refresh_grid();
+				}, this)
 			},
-			onComplete: $.proxy(function(id, fileName, responseJSON) {
-				this.refresh_grid();
-			}, this),
-			debug: false
+			debug: false,
+			request: {
+				endpoint: this.get_upload_path(),
+				inputName: this.get_upload_fieldname(),
+				params: {
+					'title': this.get_upload_fieldname(),
+					"csrfmiddlewaretoken": getCookie('csrftoken')
+				},
+				paramsInBody: true
+			}
 		});
 
 		// reset button behavior
@@ -804,7 +808,8 @@ Fiber.ImageSelectDialog = BaseFileSelectDialog.extend({
 				{title: gettext('Updated'), key: 'updated'}
 			],
 			url: this.options.url,
-			order_by: 'filename'
+			order_by: 'updated',
+			sortorder: 'desc'
 		});
 
 		this.select_grid.bind('datagrid.select', function() {
@@ -884,7 +889,8 @@ Fiber.FileSelectDialog = BaseFileSelectDialog.extend({
 				{title: gettext('Updated'), key: 'updated'}
 			],
 			url: this.options.url,
-			order_by: 'filename'
+			order_by: 'updated',
+			sortorder: 'desc'
 		});
 		this.select_grid.bind('datagrid.select', function() {
 			action_button.attr('disabled', '');
@@ -925,7 +931,7 @@ Fiber.PageSelectDialog = AdminRESTDialog.extend({
 	defaults: {
 		url: '/api/v2/pages/',
 		width: 480,
-		height: 320,
+		height: 520,
 		start_width: 480,
 		start_height: 320
 	},

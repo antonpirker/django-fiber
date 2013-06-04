@@ -10,6 +10,19 @@ from django.utils import simplejson
 from .app_settings import LOGIN_STRING, EXCLUDE_URLS, EDITOR, FIBER_PERMISSION_GROUP
 from .models import ContentItem, Page
 from .utils.import_util import import_element
+from .utils.class_loader import load_class
+from .app_settings import PERMISSION_CLASS
+
+
+def is_non_html(response):
+    """
+    Returns True if the response has no Content-type set or is not `text/html`
+    or not `application/xhtml+xml`.
+    """
+
+    content_type = response.get('Content-Type', None)
+    if content_type is None or content_type.split(';')[0] not in ('text/html', 'application/xhtml+xml'):
+        return True
 
 
 class AdminPageMiddleware(object):
@@ -29,7 +42,7 @@ class AdminPageMiddleware(object):
             return HttpResponseNotFound()
 
         # only process html and xhtml responses
-        if response['Content-Type'].split(';')[0] not in ('text/html', 'application/xhtml+xml'):
+        if is_non_html(response):
             return response
 
         if self.set_login_session(request, response):
@@ -135,6 +148,8 @@ class AdminPageMiddleware(object):
         Only show the Fiber admin interface when the request
         - has a response status code of 200
         - is performed by an user in the groups specified in FIBER_PERMISSION_GROUP default 'Content Manager' group
+        - is performed by an admin user
+        - has a user with sufficient permissions based on the Permission Class
         - has a response which is either 'text/html' or 'application/xhtml+xml'
         - is not an AJAX request
         - does not match EXCLUDE_URLS (empty by default)
@@ -144,12 +159,12 @@ class AdminPageMiddleware(object):
         if not hasattr(request, 'user'):
             return False
 
-        # (removed by anton@ignaz.at)
-        #if not request.user.is_staff:
-        #    return False
-
         # added by anton@ignaz.at
         if request.user.groups and request.user.groups.filter(name=FIBER_PERMISSION_GROUP).count() == 0:
+            return False
+        if not load_class(PERMISSION_CLASS).is_fiber_editor(request.user):
+            return False
+        if not request.user.is_staff:
             return False
 
         if response['Content-Type'].split(';')[0] not in ('text/html', 'application/xhtml+xml'):
@@ -205,8 +220,9 @@ class ObfuscateEmailAddressMiddleware(object):
     def process_response(self, request, response):
         # http://www.lampdocs.com/blog/2008/10/regular-expression-to-extract-all-e-mail-addresses-from-a-file-with-php/
         email_pattern = re.compile(r'(mailto:)?[_a-zA-Z0-9-]+(\.[_a-zA-Z0-9-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*\.(([0-9]{1,3})|([a-zA-Z]{2,3})|(aero|coop|info|museum|name))')
-        if response['Content-Type'].split(';')[0] in ('text/html', 'application/xhtml+xml'):
-            response.content = email_pattern.sub(self.encode_string_repl, response.content)
+        if is_non_html(response):
+            return response
+        response.content = email_pattern.sub(self.encode_string_repl, response.content)
         return response
 
     def encode_string_repl(self, email_pattern_match):

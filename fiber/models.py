@@ -1,5 +1,7 @@
 import os
 
+import warnings
+
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.core.files.images import get_image_dimensions
@@ -76,8 +78,8 @@ class Page(MPTTModel):
     created = models.DateTimeField(_('created'), auto_now_add=True)
     updated = models.DateTimeField(_('updated'), auto_now=True)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='subpages', verbose_name=_('parent'))
-    # TODO: add keywords, description (as meta?)
-    title = models.CharField(_('title'), blank=True, max_length=255)
+    meta_description = models.CharField(max_length=255, blank=True)
+    title = models.CharField(_('title'), max_length=255)
     url = FiberURLField(blank=True)
     redirect_page = models.ForeignKey('self', null=True, blank=True, related_name='redirected_pages', verbose_name=_('redirect page'), on_delete=models.SET_NULL)
     mark_current_regexes = models.TextField(_('mark current regexes'), blank=True)
@@ -164,7 +166,7 @@ class Page(MPTTModel):
                 self.lft > node.lft and
                 self.rght < node.rght)
 
-    def get_ancestors(self):
+    def get_ancestors(self, *args, **kwargs):
         if getattr(self, '_ancestors_retrieved', False):
             # We have already retrieved the chain of parent objects, so can skip
             # a DB query for this.
@@ -175,29 +177,13 @@ class Page(MPTTModel):
                 node = node.parent
             return ancestors
         else:
-            return super(Page, self).get_ancestors()
+            return super(Page, self).get_ancestors(*args, **kwargs)
 
     def get_ancestors_include_self(self):
-        """
-        This method is currently used because there is no include_self
-        parameter in MPTTModel's get_ancestors() method. This will probably
-        land in django-mptt 0.5
-        """
-        if self.is_root_node():
-            return self._tree_manager.filter(pk=self.pk)
+        warnings.warn("The `get_ancestors_include_self` method is deprecated,"
+        "use MPPT's `get_ancestors(include_self=True)` instead", DeprecationWarning)
 
-        opts = self._mptt_meta
-
-        left = getattr(self, opts.left_attr)
-        right = getattr(self, opts.right_attr)
-
-        qs = self._tree_manager._mptt_filter(
-            left__lte=left,
-            right__gte=right,
-            tree_id=self._mpttfield('tree_id'),
-        )
-
-        return qs.order_by(opts.left_attr)
+        return  self.get_ancestors(include_self=True)
 
     def move_page(self, target_id, position):
         """
@@ -228,6 +214,13 @@ class Page(MPTTModel):
 
     def is_public_for_user(self, user):
         return user.is_staff or self.is_public
+
+    def has_visible_children(self):
+        visible_children = [page for page in self.get_children() if page.show_in_menu]
+        if visible_children:
+            return True
+        else:
+            return False
 
 
 class PageContentItem(models.Model):
@@ -303,11 +296,17 @@ class Image(models.Model):
         super(Image, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        os.remove(os.path.join(settings.MEDIA_ROOT, str(self.image)))
+        self.image.storage.delete(self.image.name)
         super(Image, self).delete(*args, **kwargs)
 
     def get_image_information(self):
         self.width, self.height = get_image_dimensions(self.image) or (0, 0)
+
+    def get_filename(self):
+        return os.path.basename(self.image.name)
+
+    def get_size(self):
+        return '%s x %d' % (self.width, self.height)
 
 
 class File(models.Model):
@@ -333,5 +332,8 @@ class File(models.Model):
         super(File, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        os.remove(os.path.join(settings.MEDIA_ROOT, str(self.file)))
+        self.file.storage.delete(self.file.name)
         super(File, self).delete(*args, **kwargs)
+
+    def get_filename(self):
+        return os.path.basename(self.file.name)
