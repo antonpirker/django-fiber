@@ -7,7 +7,7 @@ from django.template import loader, RequestContext
 from django.utils.encoding import smart_unicode
 from django.utils import simplejson
 
-from .app_settings import LOGIN_STRING, EXCLUDE_URLS, EDITOR, FIBER_PERMISSION_GROUP
+from .app_settings import LOGIN_STRING, EXCLUDE_URLS, EDITOR
 from .models import ContentItem, Page
 from .utils.import_util import import_element
 from .utils.class_loader import load_class
@@ -147,7 +147,6 @@ class AdminPageMiddleware(object):
         """
         Only show the Fiber admin interface when the request
         - has a response status code of 200
-        - is performed by an user in the groups specified in FIBER_PERMISSION_GROUP default 'Content Manager' group
         - is performed by an admin user
         - has a user with sufficient permissions based on the Permission Class
         - has a response which is either 'text/html' or 'application/xhtml+xml'
@@ -159,9 +158,6 @@ class AdminPageMiddleware(object):
         if not hasattr(request, 'user'):
             return False
 
-        # added by anton@ignaz.at
-        if request.user.groups and request.user.groups.filter(name=FIBER_PERMISSION_GROUP).count() == 0:
-            return False
         if not load_class(PERMISSION_CLASS).is_fiber_editor(request.user):
             return False
         if not request.user.is_staff:

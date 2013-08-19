@@ -25,9 +25,6 @@ METADATA_CONTENT_SCHEMA = getattr(settings, 'FIBER_METADATA_CONTENT_SCHEMA', {})
 
 API_RENDER_HTML = getattr(settings, 'API_RENDER_HTML', False)
 
-# by anton@ignaz.at
-FIBER_PERMISSION_GROUP = getattr(settings, 'FIBER_PERMISSION_GROUP', 'Content Managers')
-
 """
 Point this class to your own Permission Class as declared in :mod:`fiber.permissions`.
 """
