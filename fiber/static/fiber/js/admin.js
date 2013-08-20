@@ -9,7 +9,7 @@ Fiber.remove_textarea = function(textarea) {};
 (function($) { // start of jQuery noConflict mode
 
 // some plugins use jQuery() instead of $()
-jQuery = $;
+//jQuery = $;
 
 var busyIndicator = {
 	show: function() {
