@@ -8,7 +8,7 @@ except ImportError:
 from . import views
 
 urlpatterns = patterns('',
-    (r'^$', views.api_root),
+    url(r'^$', views.api_root, name='fiber-api-root'),
     url(r'^pages/$', views.PageList.as_view(), name='page-list'),
     url(r'^pages/(?P<pk>[^/]+)/$', views.PageDetail.as_view(), name='page-detail'),
     url(r'^pages/(?P<pk>[^/]+)/move_page/$', views.MovePageView.as_view(), name='page-move'),

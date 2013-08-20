@@ -15,6 +15,7 @@
 			<script>
 				window.fiber_page_data = {{ pages_json|safe }};
 				window.fiber_content_items_data = {{ content_items_json|safe }};
+                window.fiber_api_root = '{% url 'fiber-api-root' %}';
 			</script>
 			<div id="df-sidebar-page-tree" class="sidebar-tree"></div>
 		</div>
